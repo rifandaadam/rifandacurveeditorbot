@@ -1,0 +1,32 @@
+# ══════════════════════════════════════════════════════
+#  Netlify Configuration — RCE Curve Preview Bot
+# ══════════════════════════════════════════════════════
+
+[build]
+  functions  = "netlify/functions"
+  publish    = "public"
+
+# Telegram webhook endpoint
+# URL: https://<your-site>.netlify.app/.netlify/functions/bot
+# Alias: https://<your-site>.netlify.app/webhook
+[[redirects]]
+  from   = "/webhook"
+  to     = "/.netlify/functions/bot"
+  status = 200
+  force  = true
+
+[[redirects]]
+  from   = "/bot"
+  to     = "/.netlify/functions/bot"
+  status = 200
+  force  = true
+
+# ── Function settings ──────────────────────────────────
+[functions]
+  # Use default bundler (zip-it-and-ship-it) for pureimage compatibility
+  # Do NOT use esbuild — pureimage has dynamic requires that break with esbuild
+  included_files = ["netlify/functions/**"]
+
+  # Increase timeout for image generation (max 26s on Netlify)
+  [functions.bot]
+    timeout = 20

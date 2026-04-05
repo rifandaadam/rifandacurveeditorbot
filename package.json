@@ -1,0 +1,20 @@
+{
+  "name": "rce-curve-preview-bot",
+  "version": "1.0.0",
+  "description": "Telegram bot for RCE (Rifanda Curve Editor) — renders GCam parametric curve previews as images",
+  "private": true,
+  "author": "Rifanda Adam",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "form-data": "^4.0.0",
+    "node-fetch": "^2.7.0",
+    "pureimage": "^0.3.9"
+  },
+  "scripts": {
+    "setup-webhook": "node scripts/set-webhook.js",
+    "delete-webhook": "node scripts/set-webhook.js --delete"
+  }
+}
