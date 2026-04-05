@@ -5,13 +5,13 @@
 //  Rifanda Curve Editor (GCam & Geliosoft) — Telegram Bot
 // ═══════════════════════════════════════════════════════════════
 
-const https   = require('https');
+const https    = require('https');
 const { PassThrough } = require('stream');
-const PImage  = require('pureimage');
+const PImage   = require('pureimage');
 const FormData = require('form-data');
-const fetch   = require('node-fetch');
+const fetch    = require('node-fetch');
 
-const TOKEN       = process.env.TELEGRAM_BOT_TOKEN;
+const TOKEN        = process.env.TELEGRAM_BOT_TOKEN;
 const TELEGRAM_API = `https://api.telegram.org/bot${TOKEN}`;
 
 if (!TOKEN) {
@@ -40,40 +40,40 @@ function hexLeToDouble(hex16) {
  */
 const SUB_MODE = {
   tone: {
-    name:        'Tone',
-    emoji:       '🌊',
-    pointCount:  17,
-    hexChars:    272,
+    name:         'Tone',
+    emoji:        '🌊',
+    pointCount:   17,
+    hexChars:     272,
     fixedXPoints: [0, 0.0625, 0.125, 0.1875, 0.25, 0.3125, 0.375, 0.4375, 0.5,
                    0.5625, 0.625, 0.6875, 0.75, 0.8125, 0.875, 0.9375, 1],
-    pointNames:  ['Black','P1','P2','P3','Shadow','P5','P6','P7','Midtone',
-                  'P9','P10','P11','Highlight','P13','P14','P15','White'],
-    curveColor:  '#3a86ff',
-    glowColor:   '#1d4ed8',
-    dotColor:    '#8338ec',
+    pointNames:   ['Black','P1','P2','P3','Shadow','P5','P6','P7','Midtone',
+                   'P9','P10','P11','Highlight','P13','P14','P15','White'],
+    curveColor:   '#3a86ff',
+    glowColor:    '#1d4ed8',
+    dotColor:     '#8338ec',
   },
   gamma: {
-    name:        'Gamma',
-    emoji:       '📈',
-    pointCount:  33,
-    hexChars:    528,
+    name:         'Gamma',
+    emoji:        '📈',
+    pointCount:   33,
+    hexChars:     528,
     fixedXPoints: Array.from({ length: 33 }, (_, i) => i / 32),
-    pointNames:  Array.from({ length: 33 }, (_, i) =>
-                   i === 0 ? 'Black' : i === 32 ? 'White' : `G${i}`),
-    curveColor:  '#38b000',
-    glowColor:   '#166534',
-    dotColor:    '#84cc16',
+    pointNames:   Array.from({ length: 33 }, (_, i) =>
+                    i === 0 ? 'Black' : i === 32 ? 'White' : `G${i}`),
+    curveColor:   '#38b000',
+    glowColor:    '#166534',
+    dotColor:     '#84cc16',
   },
   sect: {
-    name:        'Sect',
-    emoji:       '☀️',
-    pointCount:  7,
-    hexChars:    112,
+    name:         'Sect',
+    emoji:        '☀️',
+    pointCount:   7,
+    hexChars:     112,
     fixedXPoints: [0, 1/6, 2/6, 3/6, 4/6, 5/6, 1],
-    pointNames:  ['Black', 'S1', 'S2', 'Midtone', 'S4', 'S5', 'White'],
-    curveColor:  '#ff006e',
-    glowColor:   '#9d0050',
-    dotColor:    '#ff6b9d',
+    pointNames:   ['Black', 'S1', 'S2', 'Midtone', 'S4', 'S5', 'White'],
+    curveColor:   '#ff006e',
+    glowColor:    '#9d0050',
+    dotColor:     '#ff6b9d',
   },
 };
 
@@ -128,10 +128,10 @@ function pchip(x, y, xd) {
     const t = (X - x[i]) / h[i];
     const t2 = t * t, t3 = t2 * t;
     return clamp(
-      (2*t3 - 3*t2 + 1)   * y[i]       +
-      (t3  - 2*t2 + t)    * h[i] * d[i] +
-      (-2*t3 + 3*t2)      * y[i + 1]    +
-      (t3 - t2)           * h[i] * d[i + 1]
+      (2*t3 - 3*t2 + 1)  * y[i]        +
+      (t3  - 2*t2 + t)   * h[i] * d[i] +
+      (-2*t3 + 3*t2)     * y[i + 1]    +
+      (t3 - t2)          * h[i] * d[i + 1]
     );
   });
 }
@@ -146,7 +146,6 @@ function curveStats(fixedXPoints, yValues) {
   const minY       = Math.min(...yValues);
   const maxY       = Math.max(...yValues);
 
-  // Classify curve character
   let character = 'Linear';
   if (maxDev < 0.01)       character = '≈ Linear (flat)';
   else if (midY > 0.55)    character = '↑ Brightened';
@@ -169,9 +168,6 @@ function curveStats(fixedXPoints, yValues) {
 
 const CANVAS_SIZE = 512;
 
-/**
- * Draw a circle using arc — pureimage compatible
- */
 function drawCircle(ctx, cx, cy, r, fillColor) {
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, 2 * Math.PI);
@@ -180,9 +176,6 @@ function drawCircle(ctx, cx, cy, r, fillColor) {
   ctx.fill();
 }
 
-/**
- * Draw a line segment
- */
 function drawLine(ctx, x1, y1, x2, y2, color, width) {
   ctx.strokeStyle = color;
   ctx.lineWidth   = width;
@@ -192,49 +185,42 @@ function drawLine(ctx, x1, y1, x2, y2, color, width) {
   ctx.stroke();
 }
 
-/**
- * Generate curve PNG as Buffer
- */
 async function generateCurveImage(subModeKey, yValues) {
   const W   = CANVAS_SIZE;
   const H   = CANVAS_SIZE;
-  const PAD = 24; // inner padding so curve doesn't touch edges
+  const PAD = 24;
   const def = SUB_MODE[subModeKey];
 
   const img = PImage.make(W, H);
   const ctx = img.getContext('2d');
 
-  // ── Background ──────────────────────────────────────────────
+  // Background
   ctx.fillStyle = '#0f172a';
   ctx.fillRect(0, 0, W, H);
 
-  // ── Grid (16 divisions, like the original app) ───────────────
+  // Grid (16 divisions)
   ctx.lineWidth = 1;
   for (let i = 0; i <= 16; i++) {
     const xi = PAD + (i / 16) * (W - 2 * PAD);
     const yi = PAD + (i / 16) * (H - 2 * PAD);
-
-    // Major gridlines every 4 steps, minor every 1
     const isMajor = i % 4 === 0;
     const gridCol = isMajor ? '#1e3a5f' : '#152236';
-
     drawLine(ctx, xi, PAD,     xi, H - PAD, gridCol, 1);
     drawLine(ctx, PAD, yi, W - PAD, yi,     gridCol, 1);
   }
 
-  // ── Identity diagonal (red, like original app) ───────────────
+  // Identity diagonal (red)
   drawLine(ctx, PAD, H - PAD, W - PAD, PAD, '#e63946', 1);
 
-  // ── PCHIP Curve ──────────────────────────────────────────────
+  // PCHIP Curve
   const N  = 512;
   const xd = Array.from({ length: N }, (_, i) => i / (N - 1));
   const yd = pchip(def.fixedXPoints, yValues, xd);
 
-  // Map [0,1] to canvas coordinates (with padding)
   const toCanvasX = x => PAD + x * (W - 2 * PAD);
   const toCanvasY = y => H - PAD - y * (H - 2 * PAD);
 
-  // Glow pass (wide, low opacity using globalAlpha)
+  // Glow pass
   ctx.globalAlpha = 0.35;
   ctx.strokeStyle = def.glowColor;
   ctx.lineWidth   = 9;
@@ -258,37 +244,31 @@ async function generateCurveImage(subModeKey, yValues) {
   });
   ctx.stroke();
 
-  // ── Control points (dots at each fixed X point) ───────────────
+  // Control point dots
   for (let i = 0; i < def.fixedXPoints.length; i++) {
     const cx = toCanvasX(def.fixedXPoints[i]);
     const cy = toCanvasY(yValues[i]);
-
-    // White outer ring
     drawCircle(ctx, cx, cy, 5, '#ffffff');
-    // Colored inner dot
     drawCircle(ctx, cx, cy, 3, def.dotColor);
   }
 
-  // ── Corner labels (axis markers) ──────────────────────────────
-  // Small squares at 0,0 and 1,1
+  // Corner markers
   const cornerSize = 5;
   ctx.fillStyle = '#94a3b8';
-  // Bottom-left (input=0, output=0) = Black
   ctx.fillRect(PAD - 2, H - PAD - 2, cornerSize, cornerSize);
-  // Top-right (input=1, output=1) = White
   ctx.fillRect(W - PAD - 3, PAD - 3, cornerSize, cornerSize);
 
-  // ── Border frame ─────────────────────────────────────────────
+  // Border frame
   ctx.strokeStyle = '#1e3a5f';
   ctx.lineWidth   = 2;
   ctx.strokeRect(PAD, PAD, W - 2 * PAD, H - 2 * PAD);
 
-  // ── Outer border ─────────────────────────────────────────────
+  // Outer border
   ctx.strokeStyle = '#1e2d3d';
   ctx.lineWidth   = 3;
   ctx.strokeRect(1, 1, W - 2, H - 2);
 
-  // ── Encode to PNG buffer ──────────────────────────────────────
+  // Encode to PNG buffer
   return new Promise((resolve, reject) => {
     const chunks = [];
     const stream = new PassThrough();
@@ -317,11 +297,13 @@ async function callTelegram(method, body) {
   return json;
 }
 
-async function sendMessage(chatId, text, extra = {}) {
+// FIX: Tambah replyToMsgId agar bot membalas (reply) pesan user
+async function sendMessage(chatId, text, replyToMsgId = null, extra = {}) {
   return callTelegram('sendMessage', {
     chat_id:    chatId,
     text,
     parse_mode: 'HTML',
+    ...(replyToMsgId && { reply_to_message_id: replyToMsgId }),
     ...extra,
   });
 }
@@ -330,11 +312,15 @@ async function sendChatAction(chatId, action = 'upload_photo') {
   return callTelegram('sendChatAction', { chat_id: chatId, action });
 }
 
-async function sendPhoto(chatId, photoBuffer, caption) {
+// FIX: Tambah replyToMsgId agar sendPhoto juga reply ke pesan user
+async function sendPhoto(chatId, photoBuffer, caption, replyToMsgId = null) {
   const form = new FormData();
   form.append('chat_id',    String(chatId));
   form.append('caption',   caption);
   form.append('parse_mode', 'HTML');
+  if (replyToMsgId) {
+    form.append('reply_to_message_id', String(replyToMsgId));
+  }
   form.append('photo', photoBuffer, {
     filename:    'curve_preview.png',
     contentType: 'image/png',
@@ -358,7 +344,8 @@ async function sendPhoto(chatId, photoBuffer, caption) {
 //  COMMAND HANDLERS
 // ═══════════════════════════════════════════════════════════════
 
-async function handleStart(chatId, firstName) {
+// FIX: Semua handler terima msgId dan teruskan ke sendMessage / sendPhoto
+async function handleStart(chatId, firstName, msgId) {
   const name = firstName ? ` ${firstName}` : '';
   const lines = [
     `🎨 <b>RCE Curve Preview Bot</b>`,
@@ -383,10 +370,10 @@ async function handleStart(chatId, firstName) {
     `━━━━━━━━━━━━━━━━━━━━━━`,
     `🔗 <a href="https://t.me/portalgcam">Portal GCam</a>`,
   ];
-  await sendMessage(chatId, lines.join('\n'), { disable_web_page_preview: true });
+  await sendMessage(chatId, lines.join('\n'), msgId, { disable_web_page_preview: true });
 }
 
-async function handlePreview(chatId, hexInput) {
+async function handlePreview(chatId, hexInput, msgId) {
   // Validate input exists
   if (!hexInput || !hexInput.trim()) {
     await sendMessage(chatId,
@@ -395,7 +382,8 @@ async function handlePreview(chatId, hexInput) {
       `Paste <i>Hex Joined</i> dari tabel RCE.\n\n` +
       `<b>Contoh:</b>\n` +
       `<code>/preview 000000000000F03F...</code>\n\n` +
-      `Ketik /start untuk info lengkap.`
+      `Ketik /start untuk info lengkap.`,
+      msgId
     );
     return;
   }
@@ -408,7 +396,8 @@ async function handlePreview(chatId, hexInput) {
     await sendMessage(chatId,
       `❌ <b>Input tidak valid</b>\n\n` +
       `Hex hanya boleh mengandung karakter <code>0-9</code> dan <code>A-F</code>.\n\n` +
-      `Pastikan kamu copy dari kolom <b>Hex (64-bit LE)</b> di tabel RCE.`
+      `Pastikan kamu copy dari kolom <b>Hex (64-bit LE)</b> di tabel RCE.`,
+      msgId
     );
     return;
   }
@@ -423,7 +412,8 @@ async function handlePreview(chatId, hexInput) {
       `❌ <b>Panjang hex tidak dikenali</b>\n` +
       `Diterima: <code>${cleanHex.length}</code> chars\n\n` +
       `<b>Panjang yang valid:</b>\n${validList}\n\n` +
-      `Pastikan kamu copy <b>keseluruhan</b> hex dari RCE (tanpa spasi).`
+      `Pastikan kamu copy <b>keseluruhan</b> hex dari RCE (tanpa spasi).`,
+      msgId
     );
     return;
   }
@@ -435,7 +425,7 @@ async function handlePreview(chatId, hexInput) {
   try {
     yValues = parseHex(cleanHex, def.pointCount);
   } catch (err) {
-    await sendMessage(chatId, `❌ <b>Gagal parse hex:</b>\n${err.message}`);
+    await sendMessage(chatId, `❌ <b>Gagal parse hex:</b>\n${err.message}`, msgId);
     return;
   }
 
@@ -444,7 +434,8 @@ async function handlePreview(chatId, hexInput) {
   if (outOfRange.length > 0) {
     await sendMessage(chatId,
       `⚠️ <b>Peringatan:</b> ${outOfRange.length} nilai Y di luar rentang [0, 1].\n` +
-      `Kemungkinan hex dari submode yang berbeda atau data korup.`
+      `Kemungkinan hex dari submode yang berbeda atau data korup.`,
+      msgId
     );
   }
 
@@ -457,7 +448,7 @@ async function handlePreview(chatId, hexInput) {
     imgBuf = await generateCurveImage(subModeKey, yValues);
   } catch (err) {
     console.error('[generateCurveImage]', err);
-    await sendMessage(chatId, `❌ <b>Gagal generate gambar:</b>\n<code>${err.message}</code>`);
+    await sendMessage(chatId, `❌ <b>Gagal generate gambar:</b>\n<code>${err.message}</code>`, msgId);
     return;
   }
 
@@ -482,11 +473,12 @@ async function handlePreview(chatId, hexInput) {
     `🔧 <i>RCE – Rifanda Curve Editor v1.1</i>`,
   ].filter(Boolean).join('\n');
 
-  // Send photo
-  const result = await sendPhoto(chatId, imgBuf, caption);
+  // Send photo (as reply)
+  const result = await sendPhoto(chatId, imgBuf, caption, msgId);
   if (!result.ok) {
     await sendMessage(chatId,
-      `❌ <b>Gagal kirim foto:</b>\n<code>${result.description || 'Unknown error'}</code>`
+      `❌ <b>Gagal kirim foto:</b>\n<code>${result.description || 'Unknown error'}</code>`,
+      msgId
     );
   }
 }
@@ -518,6 +510,7 @@ exports.handler = async (event) => {
   if (!msg?.text) return { statusCode: 200, body: 'OK' };
 
   const chatId    = msg.chat.id;
+  const msgId     = msg.message_id;            // FIX: ambil message_id untuk reply
   const text      = (msg.text || '').trim();
   const firstName = msg.from?.first_name || '';
 
@@ -532,18 +525,18 @@ exports.handler = async (event) => {
     switch (command) {
       case '/start':
       case '/help':
-        await handleStart(chatId, firstName);
+        await handleStart(chatId, firstName, msgId);
         break;
 
       case '/preview':
-        await handlePreview(chatId, argStr);
+        await handlePreview(chatId, argStr, msgId);
         break;
 
       default:
-        // Ignore unknown commands silently (or respond)
         if (command.startsWith('/')) {
           await sendMessage(chatId,
-            `❓ Command tidak dikenal: <code>${command}</code>\n\nKirim /start untuk bantuan.`
+            `❓ Command tidak dikenal: <code>${command}</code>\n\nKirim /start untuk bantuan.`,
+            msgId
           );
         }
         break;
@@ -551,7 +544,7 @@ exports.handler = async (event) => {
   } catch (err) {
     console.error('[handler error]', err);
     try {
-      await sendMessage(chatId, `❌ Internal error: <code>${err.message}</code>`);
+      await sendMessage(chatId, `❌ Internal error: <code>${err.message}</code>`, msgId);
     } catch { /* swallow */ }
   }
 
